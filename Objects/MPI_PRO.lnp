@@ -1,0 +1,3 @@
+".\Objects\MPI_PRO.obj" 
+TO ".\Objects\MPI_PRO" 
+PRINT(".\Listings\MPI_PRO.m51")

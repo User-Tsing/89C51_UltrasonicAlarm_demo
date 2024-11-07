@@ -1,0 +1,813 @@
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\MPI_PRO.obj
+ASSEMBLER INVOKED BY: D:\C51_KEIL\C51\BIN\A51.EXE MPI_PRO.asm SET(SMALL) DEBUG PRINT(.\Listings\MPI_PRO.lst) OBJECT(.\Ob
+                      jects\MPI_PRO.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+  0090                 1     ECHO EQU P1.0;DEFINITION OF ULTRASONIC RECIEVE
+  0091                 2     TRIG EQU P1.1;DEFINITION OF ULTRASONIC CONTROL
+  00A5                 3     BUZZER EQU P2.5;DEFINITION OF BUZZER CONTROL,OLD ONE IS P1.2
+  00A5                 4     SPK EQU P2.5;ANOTHER DEFINITION OF BUZZER TO ADAPT LCD INSTRUCT
+  00A0                 5     LED1 EQU P2.0
+  00A1                 6     LED2 EQU P2.1
+  00A2                 7     LED3 EQU P2.2
+  00A3                 8     checkled EQU P2.3
+  00B1                 9     KEY1 EQU P3.1
+  00A6                10     RS BIT P2.6;old one is P2.4
+  00A5                11     RW BIT P2.5
+  00A7                12     EN BIT P2.7;OLD ONE IS P2.6
+  0036                13     X  EQU 36H;ADDRESS OF LCD
+  003C                14     TLOW   EQU  3cH 
+  00B0                15     THIGH  EQU  0b0H
+  0000                16     CASE_CUR data 0;DEFINATION
+                      17     
+  0030                18     HOUR   EQU  30H;TO BE SET
+  0031                19     MIN    EQU  31H
+  0032                20     SEC    EQU  32H
+  0033                21     SEC0   EQU  33H
+                      22             
+  0034                23     FREQ EQU 34H
+                      24             
+0000                  25     ORG 0000H
+0000 020030           26             LJMP MAIN;TO MAIN FOUNCTION
+0003                  27     ORG 0003H
+0003 32               28             RETI
+000B                  29     ORG 000BH
+000B 0202BB           30             LJMP T0INT
+0013                  31     ORG 0013H
+0013 32               32             RETI
+001B                  33     ORG 001BH
+001B 02024B           34             LJMP T1INT;TIM1 INTERRUPTION CALLBACK
+0023                  35     ORG 0023H
+0023 32               36             RETI
+                      37             
+0030                  38             ORG 0030H
+0030 C291             39     MAIN:   CLR TRIG
+0032 758911           40                     MOV TMOD,#11H;TIM0 AND TIM1 
+0035 758C00           41                     MOV TH0,#00H;FROM 00000000
+0038 758A00           42                     MOV TL0,#00H;FROM 00000000
+003B 75A88A           43                     MOV IE, #8AH;ENABLE INTERRUPTION OF TIM0 AND TIM1
+003E 7B00             44                     MOV R3,#00H;SET A FLAG OF THE RANGE
+0040 758160           45                     MOV  SP,#60H
+                      46                     ;LCD INIT
+0043 C2A7             47                     CLR  EN
+0045 71E4             48                     CALL  SET_LCD
+0047 9121             49                     CALL  INIT            
+0049 9113             50                     CALL  INIT_TIMER      
+004B 51FD             51                     CALL   CONV 
+004D D2A0             52                     SETB LED1
+004F D2A1             53                     SETB LED2
+0051 D2A2             54                     SETB LED3
+0053 D2A3             55                     SETB checkled
+                      56                     ;LCD INIT END
+0055 717B             57                     START:CALL MENU
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     2
+
+0057 12005F           58                     LCALL ULTRARANG;JUMP TO ULTRESONIC RANGING
+005A 1200B1           59                     LCALL CHECKRANGE;JUMP TO CHECK THE RANGE
+005D 80F6             60                     SJMP START
+                      61                     
+                      62                     
+005F 12025D           63     ULTRARANG:LCALL DELAY_1MS
+0062 12025D           64                       LCALL DELAY_1MS
+0065 12025D           65                       LCALL DELAY_1MS
+0068 12025D           66                       LCALL DELAY_1MS
+006B 12025D           67                       LCALL DELAY_1MS
+006E 12025D           68                       LCALL DELAY_1MS
+0071 12025D           69                       LCALL DELAY_1MS
+0074 12025D           70                       LCALL DELAY_1MS
+0077 12025D           71                       LCALL DELAY_1MS
+007A 12025D           72                       LCALL DELAY_1MS
+                      73               ;CLR F0;SET A FLAG
+007D D291             74                       SETB TRIG;TRANSMIT SIGNAL
+007F 00               75               NOP
+0080 00               76                       NOP
+0081 00               77                       NOP
+0082 00               78                       NOP
+0083 00               79                       NOP
+0084 00               80                       NOP
+0085 00               81                       NOP
+0086 00               82                       NOP
+0087 00               83                       NOP
+0088 00               84                       NOP
+0089 00               85                       NOP
+008A 00               86                       NOP
+008B 00               87                       NOP
+008C 00               88                       NOP
+008D 00               89                       NOP;FUNCTION OF DELAY 10US
+008E C291             90                       CLR TRIG;STOP TRANSMITTING
+0090 3090FD           91                       JNB ECHO,$;CHECK IF RECIEVE THE SIGNAL
+0093 D28C             92                       SETB TR0;TURN ON THE TIMER IF RECIEVE
+0095 C28D             93                       CLR TF0;
+0097 2090FD           94                       JB ECHO,$;CHECK WHETHER SIGNAL RECEPTION IS OVER
+009A C28C             95                       CLR TR0;STOP RUNNING OF TIMER
+                      96                       ;JB F0,TOEXIT;TO EXIT
+009C AE8C             97                       MOV R6,TH0;SAVE RANGE HIGH
+009E AF8A             98                       MOV R7,TL0;SAVE RANGE LOW
+                      99                       ;MOV DPTR,#58;TO CALCULATE
+00A0 7D3A            100                       MOV R5,#3AH;CHANGE REGISTER TO CALL THE FOUNCTION
+00A2 7C00            101                       MOV R4,#00H;CHANGE REGISTER TO CALL THE FOUNCTION
+                     102                       
+00A4 120266          103                       LCALL UIDIV;CALL THE DIVISION FOUNCTION
+00A7 8EF0            104                       MOV B,R6
+00A9 EF              105                       MOV A,R7
+00AA 758A00          106                       MOV TL0,#00H
+00AD 758C00          107                       MOV TH0,#00H
+00B0 22              108                       RET
+                     109                       
+                     110                       
+00B1 C3              111     CHECKRANGE:CLR C;
+00B2 F5F0            112                        MOV B,A;
+00B4 F9              113                        MOV R1,A
+00B5 940A            114                SUBB A,#10
+00B7 4025            115                JC CASE1
+00B9 C3              116                        CLR C;
+00BA E5F0            117                        MOV A,B;
+00BC F9              118                        MOV R1,A;
+00BD 9414            119                SUBB A,#20
+00BF 4035            120                JC CASE2
+00C1 C3              121                        CLR C;
+00C2 E5F0            122                        MOV A,B;
+00C4 F9              123                        MOV r1,A;
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     3
+
+00C5 941E            124                SUBB A,#30
+00C7 4045            125                JC CASE3
+00C9 5001            126                        JNC CASE0
+00CB 22              127                        RET
+                     128                        
+00CC E500            129                        CASE0:MOV A,CASE_CUR
+00CE B40001          130                                      CJNE A,#0,CASE0_SET
+00D1 22              131                                      RET
+00D2 D2A0            132                                      CASE0_SET: SETB LED1
+00D4 D2A1            133                                                             SETB LED2
+00D6 D2A2            134                                                             SETB LED3
+00D8 D2A3            135                                                             SETB checkled
+00DA 750000          136                                                             MOV CASE_CUR,#0
+00DD 22              137                                                             RET
+00DE E500            138                        CASE1:MOV A,CASE_CUR
+00E0 B40101          139                                      CJNE A,#1,CASE1_SET
+00E3 22              140                                      RET
+00E4 C2A0            141                                      CASE1_SET: CLR LED1
+00E6 D2A1            142                                                             SETB LED2
+00E8 D2A2            143                                                             SETB LED3
+00EA D2A3            144                                                             SETB checkled
+00EC 750001          145                                                             MOV CASE_CUR,#1
+00EF 120126          146                                                             LCALL M_READY
+00F2 120132          147                                                             LCALL MUS1
+00F5 22              148                                                             RET
+00F6 E500            149                        CASE2:MOV A,CASE_CUR
+00F8 B40201          150                                      CJNE A,#2,CASE2_SET
+00FB 22              151                                      RET
+00FC D2A0            152                                      CASE2_SET: SETB LED1
+00FE C2A1            153                                                             CLR LED2
+0100 D2A2            154                                                             SETB LED3
+0102 D2A3            155                                                             SETB checkled
+0104 750002          156                                                             MOV CASE_CUR,#2
+0107 120126          157                                                             LCALL M_READY
+010A 120148          158                                                             LCALL MUS2
+010D 22              159                                                             RET
+010E E500            160                        CASE3:MOV A,CASE_CUR
+0110 B40301          161                                      CJNE A,#3,CASE3_SET
+0113 22              162                                      RET
+0114 D2A0            163                                      CASE3_SET: SETB LED1
+0116 D2A1            164                                                             SETB LED2
+0118 C2A2            165                                                             CLR LED3
+011A D2A3            166                                                             SETB checkled
+011C 750003          167                                                             MOV CASE_CUR,#3
+011F 120126          168                                                             LCALL M_READY
+0122 120165          169                                                             LCALL MUS3
+0125 22              170                                                             RET
+                     171                                                             
+0126 758911          172                             M_READY:MOV TMOD,#11H
+0129 D2AF            173                                             SETB EA;AS YOU SEE,NOW ULT DOES NOT WORK
+012B D2AB            174                                             SETB ET1;LCD TIMER
+012D D2A9            175                                             SETB ET0;BUZZER TIMER
+012F D28E            176                                             SETB TR1;ENABLE LCD TIMER
+0131 22              177                                             RET
+                     178                                             
+0132 D28C            179                             MUS1:   SETB TR0
+0134 7C12            180                                             MOV R4 ,#18
+0136 0534            181             MUS1LOOP:       INC FREQ
+0138 12025D          182                                             LCALL DELAY_1MS
+013B 0534            183                                             INC FREQ
+013D 30B105          184                                             JNB KEY1, STOP1 
+0140 DCF4            185                                             DJNZ R4, MUS1LOOP
+0142 020132          186                                             LJMP MUS1
+0145 0201BE          187                                             STOP1:LJMP STOP
+                     188                                      
+0148 D28C            189                             MUS2:   SETB TR0
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     4
+
+014A 753314          190                                             MOV sec0,#20
+014D 753400          191                     MUS2LOOP:       MOV FREQ,#0
+0150 120406          192                                             LCALL DELAY_100_MS
+0153 30B1EF          193                                             JNB KEY1, STOP1
+0156 753464          194                                             MOV FREQ,#100
+0159 120406          195                                             LCALL DELAY_100_MS
+015C 30B1E6          196                                             JNB KEY1, STOP1
+015F 02014D          197                                             LJMP MUS2LOOP
+0162 0201BE          198                                             STOP2:LJMP STOP
+                     199                                       
+0165 D28C            200                             MUS3:   SETB TR0
+0167 7800            201                        MUS3LOOP:MOV R0,#0
+0169 08              202                     LOOP_music0:INC R0   
+016A 8834            203                                             MOV FREQ,R0
+016C 12025D          204                                             LCALL DELAY_1MS
+016F 12025D          205                                             LCALL DELAY_1MS
+0172 12025D          206                                             LCALL DELAY_1MS
+0175 12025D          207                                             LCALL DELAY_1MS
+0178 12025D          208                                             LCALL DELAY_1MS
+017B 30B140          209                                             JNB KEY1, STOP
+017E 12025D          210                                             LCALL DELAY_1MS
+0181 12025D          211                                             LCALL DELAY_1MS
+0184 12025D          212                                             LCALL DELAY_1MS
+0187 12025D          213                                             LCALL DELAY_1MS
+018A 12025D          214                                             LCALL DELAY_1MS
+018D 30B12E          215                                             JNB KEY1, STOP
+0190 B864D6          216                                             CJNE R0, #100, LOOP_music0 
+0193                 217                                             LOOP_music1:
+0193 8834            218                                             MOV FREQ,r0
+0195 12025D          219                                             LCALL DELAY_1MS
+0198 12025D          220                                             LCALL DELAY_1MS
+019B 12025D          221                                             LCALL DELAY_1MS
+019E 12025D          222                                             LCALL DELAY_1MS
+01A1 12025D          223                                             LCALL DELAY_1MS
+01A4 30B117          224                                             JNB KEY1, STOP
+01A7 12025D          225                                             LCALL DELAY_1MS
+01AA 12025D          226                                             LCALL DELAY_1MS
+01AD 12025D          227                                             LCALL DELAY_1MS
+01B0 12025D          228                                             LCALL DELAY_1MS
+01B3 12025D          229                                             LCALL DELAY_1MS
+01B6 30B105          230                                             JNB KEY1, STOP  
+01B9 D8D8            231                                             DJNZ R0, LOOP_music1
+01BB 020165          232                                             LJMP MUS3
+                     233                                       
+01BE 12025D          234                             STOP:   LCALL DELAY_1MS
+01C1 12025D          235                                             LCALL DELAY_1MS
+01C4 12025D          236                                             LCALL DELAY_1MS
+01C7 12025D          237                                             LCALL DELAY_1MS
+01CA 12025D          238                                             LCALL DELAY_1MS
+01CD 12025D          239                                             LCALL DELAY_1MS
+                     240     
+01D0 20B1EB          241                                             JB KEY1,STOP;SHAKING CHECK IN CASE IT IS A MISTAKE
+01D3 D2A0            242                                             SETB LED1
+01D5 D2A1            243                                             SETB LED2
+01D7 D2A2            244                                             SETB LED3
+01D9 C2AF            245                                             CLR EA
+01DB C28E            246                                             CLR TR1
+01DD C2AB            247                                             CLR ET1
+01DF C28C            248                                             CLR TR0
+01E1 C2A9            249                                             CLR ET0
+01E3 C2A5            250                                             CLR SPK 
+01E5 C2A3            251                                             CLR checkled
+01E7 753300          252                                             MOV  SEC0,#0;ABOUT LCD
+01EA 753200          253                                             MOV  SEC,#0
+01ED 753100          254                                             MOV  MIN,#0
+01F0 753000          255                                             MOV  HOUR,#0
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     5
+
+01F3 120383          256                                             LCALL MENU1
+01F6 1202FD          257                                             LCALL CONV
+                     258                                             
+01F9                 259                                             WAIT:   
+01F9 20B1FD          260                                             JB KEY1,$
+01FC 12025D          261                                             LCALL DELAY_1MS
+01FF 12025D          262                                             LCALL DELAY_1MS
+0202 12025D          263                                             LCALL DELAY_1MS
+0205 12025D          264                                             LCALL DELAY_1MS
+0208 12025D          265                                             LCALL DELAY_1MS
+020B 12025D          266                                             LCALL DELAY_1MS
+                     267     
+020E 30B1E8          268                                             JNB KEY1, WAIT
+                     269                             ;STOP ABOVE
+0211 30B102          270                             CHECK:  JNB KEY1,RESTART;TO RESTART
+0214 4111            271                                             AJMP CHECK
+0216 D2A3            272                             RESTART:SETB checkled
+0218 12025D          273                                             LCALL DELAY_1MS
+021B 12025D          274                                             LCALL DELAY_1MS
+021E 12025D          275                                             LCALL DELAY_1MS
+0221 12025D          276                                             LCALL DELAY_1MS
+0224 12025D          277                                             LCALL DELAY_1MS
+0227 12025D          278                                             LCALL DELAY_1MS
+022A 12025D          279                                             LCALL DELAY_1MS
+022D 20B1E6          280                                             JB KEY1,RESTART
+0230                 281                                             start_song:
+0230 20B1FD          282                                             JB KEY1,$       
+0233 12025D          283                                             LCALL DELAY_1MS
+0236 12025D          284                                             LCALL DELAY_1MS
+0239 12025D          285                                             LCALL DELAY_1MS
+023C 12025D          286                                             LCALL DELAY_1MS
+023F 12025D          287                                             LCALL DELAY_1MS
+0242 12025D          288                                             LCALL DELAY_1MS
+0245 30B1E8          289                                             JNB KEY1, start_song
+0248 020055          290                                             LJMP START
+                     291                       
+024B C2AF            292                       T1INT:CLR EA         ;INTERRUPTION OF TIMER1 WHICH WORKS FOR BUZZER
+024D 758DFE          293                                     MOV TH1,#0FEH;  
+0250 85348B          294                                     MOV TL1,FREQ;   
+0253 B2A5            295                                     CPL BUZZER;      
+0255 D2AF            296                                     SETB EA
+0257 32              297                                     RETI
+                     298                       
+                     299                       
+0258 7F0A            300     DELAY_10US:     MOV R7,#10;SET COUNTER
+025A DFFE            301                             DJNZ R7,$;REPEAT TO GO THROUGH MACHINE CYCLE
+025C 22              302                             RET;BACK
+                     303                             
+025D 7BFA            304     DELAY_1MS:MOV R3,#250
+025F 00              305             LOOP2:NOP
+0260 00              306                       NOP
+0261 00              307                       NOP
+0262 00              308                       NOP
+0263 DBFA            309                       DJNZ R3,LOOP2
+0265 22              310                       RET
+                     311                       
+0266 BC000B          312     UIDIV:          CJNE     R4,#00H,DIV_H1                       
+0269 BE0029          313                             CJNE     R6,#00H,DIV_H2                     
+026C EF              314     ALLDIV_L:       MOV      A,R7                                   
+026D 8DF0            315                             MOV      B,R5
+026F 84              316                             DIV      AB
+0270 FF              317                             MOV      R7,A
+0271 ADF0            318                             MOV      R5,B
+0273 22              319                             RET                             
+0274 E4              320     DIV_H1:         CLR      A                                              
+0275 CC              321                             XCH      A,R4           
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     6
+
+0276 F8              322                             MOV      R0,A           
+0277 75F008          323                             MOV      B,#08H         
+027A EF              324     UIDIV_LOOP1:MOV      A,R7                                       
+027B 2F              325                             ADD      A,R7                                   
+027C FF              326                             MOV      R7,A                                   
+027D EE              327                             MOV      A,R6                                                   
+027E 33              328                             RLC      A                                                         
+                                          
+027F FE              329                             MOV      R6,A                                   
+0280 EC              330                             MOV      A,R4                                                      
+                                                  
+0281 33              331                             RLC      A                                                         
+                                          
+0282 FC              332                             MOV      R4,A                   
+                     333                             
+0283 EE              334                             MOV      A,R6                                                      
+                                          
+0284 9D              335                             SUBB     A,R5                                                      
+                                                                                  
+0285 EC              336                             MOV      A,R4                                                      
+                                                                                  
+0286 98              337                             SUBB     A,R0                                           
+0287 4005            338                             JC       R4_HIGH                        
+0289 FC              339     R4_EQU_LOW:     MOV      R4,A                                                              
+                                                                  
+028A EE              340                             MOV      A,R6                                                      
+                                                          
+028B 9D              341                             SUBB     A,R5                                                      
+                                                          
+028C FE              342                             MOV      R6,A                                                      
+                                                          
+028D 0F              343                             INC      R7                                                        
+                                                  
+028E D5F0E9          344     R4_HIGH:        DJNZ     B,UIDIV_LOOP1                  
+0291 E4              345                             CLR      A
+0292 CE              346                             XCH      A,R6                           
+0293 FD              347                             MOV      R5,A           
+0294 22              348                             RET      
+0295 ED              349     DIV_H2:         MOV      A,R5
+0296 F8              350                             MOV      R0,A           
+0297 F5F0            351                             MOV      B,A    
+0299 EE              352                             MOV      A,R6                                   
+029A 84              353                             DIV      AB                     
+029B 20D21C          354                             JB       OV,UIDIV_END
+029E FE              355                             MOV      R6,A                                   
+029F ADF0            356                             MOV      R5,B           
+02A1 75F008          357                             MOV      B,#08H         
+02A4 EF              358     UIDIV_LOOP2:MOV      A,R7
+02A5 2F              359                             ADD      A,R7           
+02A6 FF              360                             MOV      R7,A           
+02A7 ED              361                             MOV      A,R5
+02A8 33              362                             RLC      A
+02A9 FD              363                             MOV      R5,A           
+02AA 4007            364                             JC       UIDIV_NEXT
+02AC 98              365                             SUBB     A,R0                           
+02AD 5006            366                             JNC      RE_EQU_LOW                     
+02AF D5F0F2          367     RE_HIGH:        DJNZ     B,UIDIV_LOOP2                  
+02B2 22              368                             RET     
+02B3 C3              369     UIDIV_NEXT:     CLR      C
+02B4 98              370                             SUBB     A,R0                           
+02B5 FD              371     RE_EQU_LOW:     MOV      R5,A                           
+02B6 0F              372                             INC      R7                                     
+02B7 D5F0EA          373                             DJNZ     B,UIDIV_LOOP2          
+02BA 22              374     UIDIV_END:      RET
+                     375     
+                     376     ;----------------------------------------------------
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     7
+
+                     377     ;GREY AREA
+02BB C2AF            378     T0INT:   CLR EA           ;INTERRUPTION OF TIMER0 WHICH IS WORK FOR LCD
+02BD C0E0            379                      PUSH  ACC           
+02BF 758AB0          380              MOV  TL0,#0b0h
+02C2 758C3C          381              MOV  TH0,#3ch
+02C5 0533            382                      INC sec0
+02C7 E533            383                      MOV a,sec0
+02C9 B41E2C          384                      CJNE a,#30,tt1
+02CC 753300          385                      MOV sec0,#0
+02CF 0532            386              INC  SEC            ;SECOND
+02D1 E532            387              MOV  A,SEC
+02D3 B43C20          388              CJNE  A,#60,TT
+02D6 0531            389              INC  MIN            ;MINUTE
+02D8 753200          390              MOV  SEC,#0
+02DB E531            391              MOV  A,MIN
+02DD B43C16          392              CJNE  A,#60,TT
+02E0 0530            393              INC  HOUR           ;HOUR
+02E2 753100          394              MOV  MIN,#0
+02E5 E530            395              MOV  A,HOUR
+02E7 B4180C          396              CJNE  A,#24,TT
+02EA 753300          397              MOV  SEC0,#0
+02ED 753200          398              MOV  SEC,#0          ;CLC
+02F0 753100          399              MOV  MIN,#0
+02F3 753000          400              MOV  HOUR,#0
+                     401                      
+02F6                 402      TT:     
+02F6 51FD            403                     CALL   CONV
+02F8 D0E0            404     tt1:    POP  ACC
+02FA D2AF            405                     SETB EA
+02FC 32              406              RETI
+                     407     
+                     408     ;----------------------------------------------------
+                     409     ;ABOUT LCD 
+02FD                 410     CONV:                  ;TO SET TIME DATA LIKE HOUR, MINUTE AND SECONG
+02FD E530            411               MOV  A,HOUR
+02FF 753608          412               MOV  X,#8
+0302 7123            413               CALL  SHOW_DIG2
+0304 0536            414               INC  X
+0306 743A            415               MOV  A,#':'
+0308 8536F0          416               MOV  B,X 
+030B 713E            417               CALL  LCDP2 
+030D E531            418               MOV  A,MIN     
+030F 0536            419               INC  X       
+0311 7123            420               CALL  SHOW_DIG2
+0313 0536            421               INC  X           
+0315 743A            422               MOV  A,#':'        
+0317 8536F0          423               MOV  B,X          
+031A 713E            424               CALL  LCDP2        
+031C E532            425               MOV  A,SEC      
+031E 0536            426               INC  X           
+0320 7123            427               CALL  SHOW_DIG2   
+0322 22              428               RET
+                     429     
+0323                 430     SHOW_DIG2:            ;TO SHOW THE DIGIT ON LINE 2 OF LCD
+0323 75F00A          431               MOV  B,#10    
+0326 84              432               DIV  AB     
+0327 2430            433               ADD  A,#30H      
+0329 C0F0            434               PUSH  B         
+032B 8536F0          435               MOV  B,X       
+032E 713E            436               CALL  LCDP2   
+0330 D0F0            437               POP  B         
+0332 E5F0            438               MOV  A,B    
+0334 2430            439               ADD  A,#30H     
+0336 0536            440               INC  X           
+0338 8536F0          441               MOV  B,X      
+033B 713E            442               CALL  LCDP2
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     8
+
+033D 22              443               RET
+                     444     
+033E                 445     LCDP2:                   ;TO SHOW THE CHARACTER ON LINE 2 OF LCD
+033E C0E0            446              PUSH  ACC      
+0340 E5F0            447              MOV  A,B      
+0342 24C0            448              ADD  A,#0C0H   
+0344 7162            449              CALL  WCOM     
+0346 D0E0            450              POP  ACC    
+0348 714B            451              CALL  WDATA    
+034A 22              452              RET
+                     453                      
+034B                 454     WDATA:                ;WRITE DATA TO LCD
+034B F580            455               MOV  P0,A  
+034D D2A6            456               SETB  RS
+034F 7152            457               CALL  EN1
+0351 22              458               RET
+                     459     
+0352                 460     EN1:                  ;LCD ENABLE
+0352 C2A5            461               CLR   RW
+0354 D2A7            462               SETB  EN    
+0356 715D            463               CALL  DE
+0358 C2A7            464               CLR  EN
+035A 715D            465               CALL  DE
+035C 22              466               RET
+                     467     
+035D 7FFA            468     DE:       MOV  R7,#250    ;TO DELAY 500US BY R7
+035F DFFE            469               DJNZ  R7,$
+0361 22              470               RET
+                     471     
+0362                 472     WCOM:                     ;WRITE COMMAND TO LCD
+0362 F580            473               MOV  P0,A      
+0364 7167            474               call  enable
+0366 22              475               RET
+                     476     
+0367                 477     ENABLE:                       ;TO WRITE INSTRUCT
+0367 C2A6            478               CLR RS         
+0369 C2A5            479               CLR RW          
+036B D2A7            480               SETB EN
+036D 7172            481               ACALL DELAY1          
+036F C2A7            482               CLR EN
+0371 22              483               RET
+                     484     
+0372                 485     DELAY1:                    ;FIVE MINUTES TO DELAY
+0372 7E19            486              MOV  R6,#25
+0374 7F64            487       D2:    MOV  R7,#100
+0376 DFFE            488              DJNZ  R7,$
+0378 DEFA            489              DJNZ  R6,D2
+037A 22              490              RET
+                     491     
+037B                 492     MENU:                      ;LCD SHOW
+037B 90042D          493              MOV  DPTR,#MMENU
+037E 7401            494              MOV  A,#1
+0380 718B            495              CALL  LCD_PRINT
+0382 22              496              RET
+                     497     
+0383                 498     MENU1:                      ;SHOW THE MENU OF LCD
+0383 90043E          499              MOV  DPTR,#MMENU1
+0386 7401            500              MOV  A,#1
+0388 718B            501              CALL  LCD_PRINT
+038A 22              502              RET
+                     503     
+038B                 504     LCD_PRINT:       ;SHOW CHARACTER ON DIFFERENT LINE OG LCD
+                     505     
+038B B4010C          506               CJNE  A,#1,LINE2
+038E 7480            507       LINE1:  MOV  A,#80H   
+0390 7162            508               CALL  WCOM     
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE     9
+
+0392 71B0            509               CALL  CLR_LINE  
+0394 7480            510               MOV  A,#80H    
+0396 7162            511               CALL  WCOM      
+0398 800A            512               JMP  FILL
+039A 74C0            513       LINE2:  MOV  A,#0C0H    
+039C 7162            514               CALL  WCOM     
+039E 71B0            515               CALL  CLR_LINE   
+03A0 74C0            516               MOV  A,#0C0H    
+03A2 7162            517               CALL  WCOM
+03A4 E4              518       FILL:   CLR  A          
+03A5 93              519               MOVC  A,@A+DPTR  
+03A6 B40001          520               CJNE  A,#0,LC1   
+03A9 22              521               RET
+03AA 714B            522       LC1:    CALL  WDATA      
+03AC A3              523               INC  DPTR      
+03AD 80F5            524               JMP  FILL      
+03AF 22              525               RET
+                     526     
+03B0                 527     CLR_LINE:                  ;CLEAR OR DELETE ALL THE CHARACTER ON THIS LINE
+03B0 7818            528               MOV  R0,#24
+03B2 7420            529        CL1:   MOV  A,#' '
+03B4 714B            530               CALL  WDATA
+03B6 D8FA            531               DJNZ  R0,CL1
+03B8 22              532               RET
+                     533     
+                     534     
+                     535     ;INIT OF LCD AND ELSE
+03B9                 536     INIT_LCD:                  ;LCD INIT
+03B9 758038          537               MOV  P0,#38H    
+03BC 7167            538               call  enable
+03BE 7172            539               call  delay1
+03C0 758038          540               MOV  P0,#38H    
+03C3 7167            541               call  enable
+03C5 7172            542               call  delay1
+03C7 758038          543               MOV  P0,#38H
+03CA 7167            544               call  enable
+03CC 7172            545               call  delay1
+03CE 71D1            546               CALL  INIT_LCD1
+03D0 22              547               RET
+                     548     
+03D1                 549     INIT_LCD1:                   ;INIT OF CONTROL INSTRUCT OF LCD
+03D1 7438            550               MOV  A,#38H    
+03D3 7162            551               CALL  WCOM       
+03D5 7172            552               call  delay1
+03D7 740C            553               MOV  A,#0CH     
+03D9 7162            554               CALL  WCOM      
+03DB 7172            555               call  delay1
+03DD 7401            556               MOV  A,#01H     
+03DF 7162            557               CALL  WCOM         
+03E1 7172            558               call  delay1
+03E3 22              559               RET
+                     560     
+03E4                 561     SET_LCD:                     ;LCD INIT AND TEST
+03E4 C2A7            562               CLR  EN
+03E6 71B9            563               CALL  INIT_LCD  
+03E8 7D0A            564               MOV  R5,#10
+03EA 71FB            565               CALL  DELAY
+03EC 90044F          566               MOV  DPTR,#LMESS1 
+03EF 7401            567               MOV  A,#1         
+03F1 718B            568               CALL  LCD_PRINT
+03F3 900460          569               MOV  DPTR,#LMESS2 
+03F6 7402            570               MOV  A,#2        
+03F8 718B            571               CALL  LCD_PRINT
+03FA 22              572               RET
+                     573                       
+03FB                 574     DELAY:                    ;10MS FOR DELAY
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE    10
+
+03FB 7E32            575              MOV  R6,#50
+03FD 7F64            576       D1:    MOV  R7,#100
+03FF DFFE            577              DJNZ  R7,$
+0401 DEFA            578              DJNZ  R6,D1
+0403 DDF6            579              DJNZ  R5,DELAY
+0405 22              580              RET
+                     581                      
+0406                 582     DELAY_100_MS:
+0406 7F32            583     ddel: mov r7,#50
+0408 7EC8            584     ddel1:mov r6,#200
+040A 7D0A            585     ddel2:mov r5,#10
+040C DDFE            586     ddel3:djnz r5,ddel3
+040E DEFA            587             djnz r6,ddel2
+0410 DFF6            588             djnz r7,ddel1
+                     589     
+0412 22              590         RET
+                     591     
+0413                 592     INIT_TIMER:                     ;TIMER INIT
+0413 758911          593              MOV  TMOD,#11H        
+0416 D2AF            594     SETB EA
+0418 D2A9            595     SETB ET0;?????0 ????
+041A 758A3C          596              MOV  TL0,#TLOW
+041D 758CB0          597              MOV  TH0,#THIGH
+0420 22              598              RET
+                     599     
+0421 E4              600     INIT:    CLR  A        ;TIME SHOW INIT
+0422 F533            601              MOV  SEC0,A
+0424 F532            602              MOV  SEC,A
+0426 F531            603              MOV  MIN,A
+0428 F530            604              MOV  HOUR,A
+042A C28C            605              CLR  TR0
+042C 22              606              RET
+                     607     
+                     608     ;TO BE USED TO SHOW CHARACTER ON LCD
+042D 42323120        609     MMENU:  DB  "B21 SHU SCIE MPI",0
+0431 53485520                
+0435 53434945                
+0439 204D5049                
+043D 00                      
+043E 42323120        610     MMENU1:  DB  "B21 SHU SCIE MPI",0
+0442 53485520                
+0446 53434945                
+044A 204D5049                
+044E 00                      
+                     611     
+                     612     ;TEST BYTES
+044F 20202020        613     LMESS1:  DB  "                ",0  ;LCD LINE1
+0453 20202020                
+0457 20202020                
+045B 20202020                
+045F 00                      
+0460 54494D45        614     LMESS2:  DB  "TIME            ",0  ;LCD LINE2
+0464 20202020                
+0468 20202020                
+046C 20202020                
+0470 00                      
+                     615     
+                     616     
+                     617     END
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE    11
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+ACC. . . . . . . .  D ADDR   00E0H   A   
+ALLDIV_L . . . . .  C ADDR   026CH   A   
+B. . . . . . . . .  D ADDR   00F0H   A   
+BUZZER . . . . . .  B ADDR   00A0H.5 A   
+CASE0. . . . . . .  C ADDR   00CCH   A   
+CASE0_SET. . . . .  C ADDR   00D2H   A   
+CASE1. . . . . . .  C ADDR   00DEH   A   
+CASE1_SET. . . . .  C ADDR   00E4H   A   
+CASE2. . . . . . .  C ADDR   00F6H   A   
+CASE2_SET. . . . .  C ADDR   00FCH   A   
+CASE3. . . . . . .  C ADDR   010EH   A   
+CASE3_SET. . . . .  C ADDR   0114H   A   
+CASE_CUR . . . . .  D ADDR   0000H   A   
+CHECK. . . . . . .  C ADDR   0211H   A   
+CHECKLED . . . . .  B ADDR   00A0H.3 A   
+CHECKRANGE . . . .  C ADDR   00B1H   A   
+CL1. . . . . . . .  C ADDR   03B2H   A   
+CLR_LINE . . . . .  C ADDR   03B0H   A   
+CONV . . . . . . .  C ADDR   02FDH   A   
+D1 . . . . . . . .  C ADDR   03FDH   A   
+D2 . . . . . . . .  C ADDR   0374H   A   
+DDEL . . . . . . .  C ADDR   0406H   A   
+DDEL1. . . . . . .  C ADDR   0408H   A   
+DDEL2. . . . . . .  C ADDR   040AH   A   
+DDEL3. . . . . . .  C ADDR   040CH   A   
+DE . . . . . . . .  C ADDR   035DH   A   
+DELAY. . . . . . .  C ADDR   03FBH   A   
+DELAY1 . . . . . .  C ADDR   0372H   A   
+DELAY_100_MS . . .  C ADDR   0406H   A   
+DELAY_10US . . . .  C ADDR   0258H   A   
+DELAY_1MS. . . . .  C ADDR   025DH   A   
+DIV_H1 . . . . . .  C ADDR   0274H   A   
+DIV_H2 . . . . . .  C ADDR   0295H   A   
+EA . . . . . . . .  B ADDR   00A8H.7 A   
+ECHO . . . . . . .  B ADDR   0090H.0 A   
+EN . . . . . . . .  B ADDR   00A0H.7 A   
+EN1. . . . . . . .  C ADDR   0352H   A   
+ENABLE . . . . . .  C ADDR   0367H   A   
+ET0. . . . . . . .  B ADDR   00A8H.1 A   
+ET1. . . . . . . .  B ADDR   00A8H.3 A   
+FILL . . . . . . .  C ADDR   03A4H   A   
+FREQ . . . . . . .  N NUMB   0034H   A   
+HOUR . . . . . . .  N NUMB   0030H   A   
+IE . . . . . . . .  D ADDR   00A8H   A   
+INIT . . . . . . .  C ADDR   0421H   A   
+INIT_LCD . . . . .  C ADDR   03B9H   A   
+INIT_LCD1. . . . .  C ADDR   03D1H   A   
+INIT_TIMER . . . .  C ADDR   0413H   A   
+KEY1 . . . . . . .  B ADDR   00B0H.1 A   
+LC1. . . . . . . .  C ADDR   03AAH   A   
+LCDP2. . . . . . .  C ADDR   033EH   A   
+LCD_PRINT. . . . .  C ADDR   038BH   A   
+LED1 . . . . . . .  B ADDR   00A0H.0 A   
+LED2 . . . . . . .  B ADDR   00A0H.1 A   
+LED3 . . . . . . .  B ADDR   00A0H.2 A   
+LINE1. . . . . . .  C ADDR   038EH   A   
+LINE2. . . . . . .  C ADDR   039AH   A   
+LMESS1 . . . . . .  C ADDR   044FH   A   
+LMESS2 . . . . . .  C ADDR   0460H   A   
+LOOP2. . . . . . .  C ADDR   025FH   A   
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE    12
+
+LOOP_MUSIC0. . . .  C ADDR   0169H   A   
+LOOP_MUSIC1. . . .  C ADDR   0193H   A   
+MAIN . . . . . . .  C ADDR   0030H   A   
+MENU . . . . . . .  C ADDR   037BH   A   
+MENU1. . . . . . .  C ADDR   0383H   A   
+MIN. . . . . . . .  N NUMB   0031H   A   
+MMENU. . . . . . .  C ADDR   042DH   A   
+MMENU1 . . . . . .  C ADDR   043EH   A   
+MUS1 . . . . . . .  C ADDR   0132H   A   
+MUS1LOOP . . . . .  C ADDR   0136H   A   
+MUS2 . . . . . . .  C ADDR   0148H   A   
+MUS2LOOP . . . . .  C ADDR   014DH   A   
+MUS3 . . . . . . .  C ADDR   0165H   A   
+MUS3LOOP . . . . .  C ADDR   0167H   A   
+M_READY. . . . . .  C ADDR   0126H   A   
+OV . . . . . . . .  B ADDR   00D0H.2 A   
+P0 . . . . . . . .  D ADDR   0080H   A   
+P1 . . . . . . . .  D ADDR   0090H   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+P3 . . . . . . . .  D ADDR   00B0H   A   
+R4_EQU_LOW . . . .  C ADDR   0289H   A   
+R4_HIGH. . . . . .  C ADDR   028EH   A   
+RESTART. . . . . .  C ADDR   0216H   A   
+RE_EQU_LOW . . . .  C ADDR   02B5H   A   
+RE_HIGH. . . . . .  C ADDR   02AFH   A   
+RS . . . . . . . .  B ADDR   00A0H.6 A   
+RW . . . . . . . .  B ADDR   00A0H.5 A   
+SEC. . . . . . . .  N NUMB   0032H   A   
+SEC0 . . . . . . .  N NUMB   0033H   A   
+SET_LCD. . . . . .  C ADDR   03E4H   A   
+SHOW_DIG2. . . . .  C ADDR   0323H   A   
+SP . . . . . . . .  D ADDR   0081H   A   
+SPK. . . . . . . .  B ADDR   00A0H.5 A   
+START. . . . . . .  C ADDR   0055H   A   
+START_SONG . . . .  C ADDR   0230H   A   
+STOP . . . . . . .  C ADDR   01BEH   A   
+STOP1. . . . . . .  C ADDR   0145H   A   
+STOP2. . . . . . .  C ADDR   0162H   A   
+T0INT. . . . . . .  C ADDR   02BBH   A   
+T1INT. . . . . . .  C ADDR   024BH   A   
+TF0. . . . . . . .  B ADDR   0088H.5 A   
+TH0. . . . . . . .  D ADDR   008CH   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+THIGH. . . . . . .  N NUMB   00B0H   A   
+TL0. . . . . . . .  D ADDR   008AH   A   
+TL1. . . . . . . .  D ADDR   008BH   A   
+TLOW . . . . . . .  N NUMB   003CH   A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR0. . . . . . . .  B ADDR   0088H.4 A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+TRIG . . . . . . .  B ADDR   0090H.1 A   
+TT . . . . . . . .  C ADDR   02F6H   A   
+TT1. . . . . . . .  C ADDR   02F8H   A   
+UIDIV. . . . . . .  C ADDR   0266H   A   
+UIDIV_END. . . . .  C ADDR   02BAH   A   
+UIDIV_LOOP1. . . .  C ADDR   027AH   A   
+UIDIV_LOOP2. . . .  C ADDR   02A4H   A   
+UIDIV_NEXT . . . .  C ADDR   02B3H   A   
+ULTRARANG. . . . .  C ADDR   005FH   A   
+WAIT . . . . . . .  C ADDR   01F9H   A   
+WCOM . . . . . . .  C ADDR   0362H   A   
+WDATA. . . . . . .  C ADDR   034BH   A   
+X. . . . . . . . .  N NUMB   0036H   A   
+
+
+REGISTER BANK(S) USED: 0 
+A51 MACRO ASSEMBLER  MPI_PRO                                                              05/10/2024 20:05:27 PAGE    13
+
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)
