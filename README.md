@@ -6,4 +6,12 @@ Checked by STAssn
 2024年上半年烧录单片机调试性能测试通过，年代久远。                 
 部分函数使用开源代码，部分自行编写设计，集百家之长/短，但也没有实现完全体。（时间紧迫？缺少组员？）                    
 C语言是Keil设计开发单片机（STM32、C51等）程序的常用语言，这里使用汇编语言是因为课程大作业要求使用汇编语言。              
-上传是为了纪念曾经制作过这样一个课程项目。
+上传是为了纪念曾经制作过这样一个课程项目。      
+
+
+PS:         
+List of participants:        
+Checked and debugged by STAssn;        
+Program: STAssn(C), Y Li;      
+Other partners: Y Feng, C Chiang, C T'u    
+（为避免不必要的麻烦，以上均为化名）    
